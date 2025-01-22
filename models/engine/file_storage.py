@@ -3,7 +3,6 @@ FileStorage class that serializes instances to a
 JSON file and deserializes JSON file to instances"""
 
 import json
-from os.path import exists
 from models.user import User
 from models.base_model import BaseModel
 from models.state import State
@@ -37,23 +36,24 @@ class FileStorage:
             json.dump(obj_dict, file)
 
     def reload(self):
-        """Deserializes the JSON file to __objects (if file exists)."""
-        if exists(self.__file_path):
-            with open(self.__file_path, "r", encoding="utf-8") as file:
-                obj_dict = json.load(file)
-                class_map = {
-                    "BaseModel": BaseModel,
-                    "User": User,
-                    "State": State,
-                    "City": City,
-                    "Amenity": Amenity,
-                    "Place": Place,
-                    "Review": Review,
-                }
-                for key, value in obj_dict.items():
-                    class_name = value["__class__"]
-                    if class_name in class_map:
-                        self.__objects[key] = class_map[class_name](**value)
+        """Deserializes the JSON file to __objects."""
+        for key, value in self.__objects.items():
+            print(f"Key: {key}, Value: {value}")  # Debugging statement
+            class_name = value['__class__']
+            print(f"Class name: {class_name}")  # Debugging statement
+            class_map = {
+                'BaseModel': BaseModel,
+                'User': User,
+                'State': State,
+                'City': City,
+                'Amenity': Amenity,
+                'Place': Place,
+                'Review': Review
+            }
+            if class_name in class_map:
+                self.__objects[key] = class_map[class_name](**value)
+            else:
+                print(f"Class {class_name} not found in class_map")
 
     def delete(self, obj=None):
         """Deletes obj from __objects if it exists."""
