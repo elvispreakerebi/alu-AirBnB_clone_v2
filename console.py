@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+#!/Users/elviskerebi/Documents/python/alu-works/alu-AirBnB_clone_v2/myenv/bin/python3
+
 """
 Command interpreter for managing objects.
 """
@@ -12,6 +13,7 @@ from models.city import City
 from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
+import shlex
 
 class_map = {
     "BaseModel": BaseModel,
@@ -55,48 +57,37 @@ class HBNBCommand(cmd.Cmd):
             "based on the class name and id."
         )
 
-    def do_create(self, arg):
-        """Creates a new instance of a class with given parameters."""
-        args = arg.split()
-        if not args:
-            print("** class name missing **")
-            return
+    def parse_create_args(self, arg):
+        """Helper function to parse arguments for create."""
+        args = shlex.split(arg)
+        if len(args) == 0:
+            return None, None, "** class name missing **"
+        
         class_name = args[0]
         if class_name not in class_map:
-            print("** class doesn't exist **")
-            return
-
-        # Create a new instance of the class
-        new_instance = class_map[class_name]()
-
-        # Parse additional parameters
-        for param in args[1:]:
-            if "=" in param:
-                key, value = param.split("=", 1)
-
-                # Handle string values
+            return None, None, "** class doesn't exist **"
+        
+        attributes = {}
+        for pair in args[1:]:
+            if "=" in pair:
+                key, value = pair.split("=", 1)
                 if value.startswith('"') and value.endswith('"'):
-                    value = value[1:-1].replace("_", " ").replace('\\"', '"')
-                # Handle float values
-                elif "." in value:
-                    try:
-                        value = float(value)
-                    except ValueError:
-                        continue  # Skip invalid float
-                # Handle integer values
-                else:
-                    try:
-                        value = int(value)
-                    except ValueError:
-                        continue  # Skip invalid integer
-
-                # Set the attribute on the instance
-                setattr(new_instance, key, value)
-
-        # Save the instance and print its ID
-        new_instance.save()
-        print(new_instance.id)
-
+                    value = value[1:-1].replace('\\"', '"')  # Remove surrounding quotes and unescape quotes
+                attributes[key] = value
+        
+        return class_name, attributes, None
+    def do_create(self, arg):
+        """Create a new instance of a model, save it to the database, and print the ID."""
+        class_name, attributes, error = self.parse_create_args(arg)
+        if error:
+            print(error)
+            return
+        try:
+            new_instance = class_map[class_name](**attributes)
+            new_instance.save()
+            print(new_instance.id)
+        except Exception as e:
+            print(f"Error: {e}")
 
     def do_show(self, arg):
         """Show the string representation of an instance."""
@@ -131,7 +122,7 @@ class HBNBCommand(cmd.Cmd):
             return
         key = f"{args[0]}.{args[1]}"
         if key in storage.all():
-            del storage.all()[key]
+            storage.delete(storage.all()[key])
             storage.save()
         else:
             print("** no instance found **")

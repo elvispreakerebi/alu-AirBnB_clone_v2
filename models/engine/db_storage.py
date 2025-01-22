@@ -2,14 +2,31 @@
 This module contains the DBStorage class"""
 
 import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from models.base_model import Base
+from models.user import User
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.place import Place
+from models.review import Review
+
+load_dotenv()
 
 class DBStorage:
     """DBStorage class"""
     __engine = None
     __session = None
+    __models = {
+        'User': User,
+        'State': State,
+        'City': City,
+        'Amenity': Amenity,
+        'Place': Place,
+        'Review': Review
+    }
 
     def __init__(self):
         """Initialize DBStorage"""
@@ -24,15 +41,28 @@ class DBStorage:
         if os.getenv("HBNB_ENV") == "test":
             Base.metadata.drop_all(bind=self.__engine)
 
+        Base.metadata.create_all(self.__engine)  # Create all tables
+
+        self.__session = scoped_session(sessionmaker(bind=self.__engine, expire_on_commit=False))
+
+        if os.getenv("HBNB_ENV") == "test":
+            self.reload()
+
     def all(self, cls=None):
-        """Query all objects"""
+        """Query on the current database session."""
+        all_objs = {}
         if cls:
-            return {f"{cls.__name__}.{obj.id}": obj for obj in self.__session.query(cls).all()}
+            objs = self.__session.query(cls).all()
+            for obj in objs:
+                key = f"{obj.__class__.__name__}.{obj.id}"
+                all_objs[key] = obj
         else:
-            all_objs = []
-            for cls in Base.__subclasses__():
-                all_objs.extend(self.__session.query(cls).all())
-            return {f"{type(obj).__name__}.{obj.id}": obj for obj in all_objs}
+            for cls in self.__models.values():
+                objs = self.__session.query(cls).all()
+                for obj in objs:
+                    key = f"{obj.__class__.__name__}.{obj.id}"
+                    all_objs[key] = obj
+        return all_objs
 
     def new(self, obj):
         """Add new object to session"""
