@@ -1,6 +1,6 @@
 """
-This module contains the FileStorage class.
-"""
+FileStorage class that serializes instances to a 
+JSON file and deserializes JSON file to instances"""
 
 import json
 from os.path import exists
@@ -18,8 +18,11 @@ class FileStorage:
     __file_path = "storage.json"
     __objects = {}
 
-    def all(self):
-        """Returns the dictionary __objects."""
+    def all(self, cls=None):
+        """Returns a dictionary of all objects, or filtered by class if cls is provided."""
+        if cls:
+            cls_name = cls.__name__
+            return {key: obj for key, obj in self.__objects.items() if key.startswith(cls_name)}
         return self.__objects
 
     def new(self, obj):
@@ -51,3 +54,11 @@ class FileStorage:
                     class_name = value["__class__"]
                     if class_name in class_map:
                         self.__objects[key] = class_map[class_name](**value)
+
+    def delete(self, obj=None):
+        """Deletes obj from __objects if it exists."""
+        if obj is not None:
+            key = f"{obj.__class__.__name__}.{obj.id}"
+            if key in self.__objects:
+                del self.__objects[key]
+                self.save()
